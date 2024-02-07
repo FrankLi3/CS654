@@ -32,22 +32,21 @@ uint8_t COUNT = 0;
 
 #define BTN2_RELEASED() PORTDbits.RD10 == 1
 
-//#define LED_STATE()\
-//    if(PORTEbits.RE8 ^ PORTDbits.RD10){\
-//        SETLED(LED3_PORT);\
-//    }else{\
-//        CLEARLED(LED3_PORT);\
-//        
-//    }
-//
-//#define LED_BLINK()\
-//    int i;\
-//    for (i=1; i<4;i++){\
-//        SETLED(LED4_PORT);\
-//        __delay_ms(10);\
-//        CLEARLED(LED4_PORT);\
-//        __delay_ms(1000);\
-//    }
+#define LED_STATE()\
+    if(PORTEbits.RE8 ^ PORTDbits.RD10){\
+        SETLED(LED3_PORT);\
+    }else{\
+        CLEARLED(LED3_PORT);\
+    }
+
+#define LED_BLINK()\
+    int i;\
+    for (i=1; i<4;i++){\
+        SETLED(LED4_PORT);\
+        __delay_ms(10);\
+        CLEARLED(LED4_PORT);\
+        __delay_ms(1000);\
+    }
     
 
     

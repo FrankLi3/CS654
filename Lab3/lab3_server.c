@@ -18,13 +18,6 @@
 #include <fcntl.h>
 #include "pc_crc16.h"
 #include "lab3.h"
-#include "lab3_troll.h"
-
-
-#define MAX_ATTEMPTS 5
-#define START_BYTE 0x0
-#define MAX_MSG_BODY 255
-
 
 #define GREETING_STR						\
     "CS454/654 - Lab 3 Server\n"				\
@@ -39,13 +32,11 @@
 
 #define TROLL_PATH "./lab3_troll"
 
-
 int main(int argc, char* argv[])
 {
 	double troll_pct=0.3;		// Perturbation % for the troll (if needed)
 	int ifd,ofd,i,N,troll=0;	// Input and Output file descriptors (serial/troll)
-	// char str[MSG_BYTES_MSG],opt;	// String input
-	char str[MAX_MSG_BODY], opt;
+	char str[MSG_BYTES_MSG],opt;	// String input
 	struct termios oldtio, tio;	// Serial configuration parameters
 	int VERBOSE = 0;		// Verbose output - can be overriden with -v
 	int dev_name_len;
@@ -105,103 +96,113 @@ int main(int argc, char* argv[])
 	//
  	// WRITE ME: Set up the serial port parameters and data format
 	//
-
-	tcsetattr(ifd, TCSANOW, &tio);
-
 	tcgetattr(ifd,&oldtio);
-	tio.c_cflag = B9600|CS8|CLOCAL|CREAD;
+
+	tio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
 	tio.c_iflag = 0;
 	tio.c_oflag = 0;
 	tio.c_lflag = 0;
 
-	tcflush(ifd,TCIFLUSH);
-	tcflush(ofd,TCIFLUSH);
+	// flush any pending request on the port
+	tcflush(ifd, TCIFLUSH);
+	tcflush(ofd, TCIFLUSH);
 
-	tcsetattr(ifd,TCSANOW, &tio);
-	tcsetattr(ofd,TCSANOW, &tio);
-
-
-	int attempts = 0;
-	int ack = 0;
+	// set new attributes for serial port
+	tcsetattr(ifd, TCSANOW, &tio);
+	tcsetattr(ofd, TCSANOW, &tio);
 
 
 	while(1)
 	{
-
+		
 		//
 		// WRITE ME: Read a line of input (Hint: use fgetc(stdin) to read each character)
 		//
-		printf("Enter a message: ");
-		if (fgets(str, sizeof(str), stdin) == NULL) {
-			// Handle error
-			perror("Error reading input");
-			continue;
+		FILE * the_port;
+		char c;
+		int i = 0;
+		memset(str, 0, sizeof(str));
+
+		while((c = fgetc(stdin)) != "\n" && c != EOF){
+			if (i < sizeof(str) - 1){
+				str[i++] = (char) c;
+			}
 		}
+
+		int str_len = i;
+
+		str[strcspn(str, "\n")] = 0;
 
 		if (strcmp(str, "quit") == 0) break;
 
 		//
 		// WRITE ME: Compute crc (only lowest 16 bits are returned)
 		//
-		unsigned short crc = pc_crc16(str, strlen(str));
+		int crc_value = pc_crc16(str,str_len);
+		printf("crc : 0x%x\n", crc_value);
 
-		attempts = 0;
-		ack = 0;
+		// Array to store string
+		char * message = malloc( 4 +  str_len + 1);
 
-		while (!ack && attempts < MAX_ATTEMPTS)
+		message[0] = MSG_START;
+		message[1] = (crc_value >> 8) & 0xFF;
+		message[2] = crc_value & 0xFF;
+		message[3] = str_len;
+
+		printf("%02x\n", message[0]);
+		printf("%02x\n", message[1]);
+		printf("%02x\n", message[2]);
+		printf("%dx\n", message[3]);
+
+		memcpy(&message[4] , str, str_len);
+		message[4 + str_len] = "\0";
+
+		int attempts = 0;
+		int ack = MSG_NACK;
+
+		while (!ack)
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);
 
+			
 			// 
 			// WRITE ME: Send message
 			//
-			if (write(ofd,str,strlen(str)) != strlen(str)){
-				perror("Error sending message");
-				continue;
-				//Handle error
-			}
-
+			write(ofd, message,str_len+5);
+		
 			printf("Message sent, waiting for ack... ");
 
 			
 			//
 			// WRITE ME: Wait for MSG_ACK or MSG_NACK
 			//
-			char ack_nack;
-			if (read(ifd, &ack_nack, 1) > 0) {
-            if (ack_nack == MSG_ACK) {
-					printf("ACK received\n");
-					ack = 1; // Acknowledgment received
-				} else if (ack_nack == MSG_NACK) {
-					printf("NACK received, resending...\n");
-				}
-			} else {
-				perror("Error reading acknowledgment");
+			ssize_t bytes_read = read(ifd, &c,1);
+			if (bytes_read ==1){
+				printf("%c\n",(int)c);
+			}else{
+				printf("error when reading c: %1d\n",bytes_read);
 			}
-		  
-			attempts++;
-			
-		// printf("%s\n", ack ? "ACK" : "NACK, resending");
-		}
-		
-		if(!ack){
-			printf("Failed to receive ACK after %d attempts\n", MAX_ATTEMPTS);
+
+			ack = (int) c;
+
+			printf("%s\n", ack ? "ACK" : "NACK, resending");
 		}
 		printf("\n");
-
+		free(message);
 	}
+
+
 	//
 	// WRITE ME: Reset the serial port parameters
 	//
-	tcsetattr(ifd,TCSANOW, &oldtio);
-
+	tio.c_cflag = oldtio.c_cflag;
+	tio.c_iflag = oldtio.c_iflag;
+	tio.c_oflag = oldtio.c_oflag;
+	tio.c_lflag = oldtio.c_lflag;
+	
 	// Close the serial port
 	close(ifd);
 	
 	return EXIT_SUCCESS;
-
 }
-
-
-
 

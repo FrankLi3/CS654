@@ -22,6 +22,9 @@
 
 
 #define MAX_ATTEMPTS 5
+#define START_BYTE 0x0
+#define MAX_MSG_BODY 255
+
 
 #define GREETING_STR						\
     "CS454/654 - Lab 3 Server\n"				\
@@ -36,11 +39,13 @@
 
 #define TROLL_PATH "./lab3_troll"
 
+
 int main(int argc, char* argv[])
 {
 	double troll_pct=0.3;		// Perturbation % for the troll (if needed)
 	int ifd,ofd,i,N,troll=0;	// Input and Output file descriptors (serial/troll)
-	char str[MSG_BYTES_MSG],opt;	// String input
+	// char str[MSG_BYTES_MSG],opt;	// String input
+	char str[MAX_MSG_BODY], opt;
 	struct termios oldtio, tio;	// Serial configuration parameters
 	int VERBOSE = 0;		// Verbose output - can be overriden with -v
 	int dev_name_len;
@@ -100,23 +105,10 @@ int main(int argc, char* argv[])
 	//
  	// WRITE ME: Set up the serial port parameters and data format
 	//
-	
-	// struct termios tio;
 
-	// memset(&tio, 0, sizeof(tio));
-	// tio.c_cflag = CS8 | CREAD | CLOCAL; // 8n1, see termios.h for more information
-	// tio.c_iflag = IGNPAR;
-	// tio.c_oflag = 0;
-
-	// // Set input mode (non-canonical, no echo,...)
-	// tio.c_lflag = 0;
-
-	// cfsetospeed(&tio, B9600); // Set baud rate
-	// cfsetispeed(&tio, B9600); // Same baud rate for input
+	tcsetattr(ifd, TCSANOW, &tio);
 
 	tcgetattr(ifd,&oldtio);
-	tcgetattr(ofd,&oldtio);
-
 	tio.c_cflag = B9600|CS8|CLOCAL|CREAD;
 	tio.c_iflag = 0;
 	tio.c_oflag = 0;
@@ -124,7 +116,7 @@ int main(int argc, char* argv[])
 
 	tcflush(ifd,TCIFLUSH);
 	tcflush(ofd,TCIFLUSH);
-	
+
 	tcsetattr(ifd,TCSANOW, &tio);
 	tcsetattr(ofd,TCSANOW, &tio);
 
@@ -177,7 +169,7 @@ int main(int argc, char* argv[])
 			//
 			char ack_nack;
 			if (read(ifd, &ack_nack, 1) > 0) {
-        		    if (ack_nack == MSG_ACK) {
+            if (ack_nack == MSG_ACK) {
 					printf("ACK received\n");
 					ack = 1; // Acknowledgment received
 				} else if (ack_nack == MSG_NACK) {
@@ -186,9 +178,8 @@ int main(int argc, char* argv[])
 			} else {
 				perror("Error reading acknowledgment");
 			}
-		}
-
-		attempts++;
+		  
+			attempts++;
 			
 		// printf("%s\n", ack ? "ACK" : "NACK, resending");
 		}
@@ -198,7 +189,7 @@ int main(int argc, char* argv[])
 		}
 		printf("\n");
 
-
+	}
 	//
 	// WRITE ME: Reset the serial port parameters
 	//

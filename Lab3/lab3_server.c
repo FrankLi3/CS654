@@ -100,22 +100,38 @@ int main(int argc, char* argv[])
 	//
  	// WRITE ME: Set up the serial port parameters and data format
 	//
+	
 	// struct termios tio;
-	memset(&tio, 0, sizeof(tio));
-	tio.c_cflag = CS8 | CREAD | CLOCAL; // 8n1, see termios.h for more information
-	tio.c_iflag = IGNPAR;
-	tio.c_oflag = 0;
 
-	// Set input mode (non-canonical, no echo,...)
-	tio.c_lflag = 0;
+	// memset(&tio, 0, sizeof(tio));
+	// tio.c_cflag = CS8 | CREAD | CLOCAL; // 8n1, see termios.h for more information
+	// tio.c_iflag = IGNPAR;
+	// tio.c_oflag = 0;
 
-	cfsetospeed(&tio, B9600); // Set baud rate
-	cfsetispeed(&tio, B9600); // Same baud rate for input
+	// // Set input mode (non-canonical, no echo,...)
+	// tio.c_lflag = 0;
+
+	// cfsetospeed(&tio, B9600); // Set baud rate
+	// cfsetispeed(&tio, B9600); // Same baud rate for input
 
 	tcsetattr(ifd, TCSANOW, &tio);
 
+	tcgetattr(ifd,&oldtio);
+	tio.c_cflag = B9600|CS8|CLOCAL|CREAD;
+	tio.c_iflag = 0;
+	tio.c_oflag = 0;
+	tio.c_lflag = 0;
+
+	tcflush(ifd,TCIFLUSH);
+	tcflush(ofd,TCIFLUSH);
+
+	tcsetattr(ifd,TCSANOW, &tio);
+	tcsetattr(ofd,TCSANOW, &tio);
+
+
 	int attempts = 0;
 	int ack = 0;
+
 
 	while(1)
 	{
@@ -140,11 +156,10 @@ int main(int argc, char* argv[])
 		attempts = 0;
 		ack = 0;
 
-		while (!ack)
+		while (!ack && attempts < MAX_ATTEMPTS)
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);
 
-			
 			// 
 			// WRITE ME: Send message
 			//
@@ -175,9 +190,9 @@ int main(int argc, char* argv[])
 
 		attempts++;
 			
-
 		// printf("%s\n", ack ? "ACK" : "NACK, resending");
 		}
+		
 		if(!ack){
 			printf("Failed to receive ACK after %d attempts\n", MAX_ATTEMPTS);
 		}

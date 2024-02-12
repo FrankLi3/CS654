@@ -114,9 +114,9 @@ int main(int argc, char* argv[])
 	// cfsetospeed(&tio, B9600); // Set baud rate
 	// cfsetispeed(&tio, B9600); // Same baud rate for input
 
-	tcsetattr(ifd, TCSANOW, &tio);
-
 	tcgetattr(ifd,&oldtio);
+	tcgetattr(ofd,&oldtio);
+
 	tio.c_cflag = B9600|CS8|CLOCAL|CREAD;
 	tio.c_iflag = 0;
 	tio.c_oflag = 0;
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
 
 	tcflush(ifd,TCIFLUSH);
 	tcflush(ofd,TCIFLUSH);
-
+	
 	tcsetattr(ifd,TCSANOW, &tio);
 	tcsetattr(ofd,TCSANOW, &tio);
 
@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
 			//
 			char ack_nack;
 			if (read(ifd, &ack_nack, 1) > 0) {
-            if (ack_nack == MSG_ACK) {
+        		    if (ack_nack == MSG_ACK) {
 					printf("ACK received\n");
 					ack = 1; // Acknowledgment received
 				} else if (ack_nack == MSG_NACK) {

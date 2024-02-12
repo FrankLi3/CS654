@@ -20,6 +20,9 @@
 #include "lab3.h"
 #include "lab3_troll.h"
 
+
+#define MAX_ATTEMPTS 5
+
 #define GREETING_STR						\
     "CS454/654 - Lab 3 Server\n"				\
     "Author: Renato Mancuso (BU)\n"				\
@@ -97,6 +100,22 @@ int main(int argc, char* argv[])
 	//
  	// WRITE ME: Set up the serial port parameters and data format
 	//
+	struct termios tio;
+	memset(&tio, 0, sizeof(tio));
+	tio.c_cflag = CS8 | CREAD | CLOCAL; // 8n1, see termios.h for more information
+	tio.c_iflag = IGNPAR;
+	tio.c_oflag = 0;
+
+	// Set input mode (non-canonical, no echo,...)
+	tio.c_lflag = 0;
+
+	cfsetospeed(&tio, B9600); // Set baud rate
+	cfsetispeed(&tio, B9600); // Same baud rate for input
+
+	tcsetattr(ifd, TCSANOW, &tio);
+
+	int attempts = 0;
+	int ack = 0;
 
 	while(1)
 	{
@@ -104,21 +123,22 @@ int main(int argc, char* argv[])
 		//
 		// WRITE ME: Read a line of input (Hint: use fgetc(stdin) to read each character)
 		//
-		char str[MSG_BYTES_MSG];
-		unsigned short crc;
-		int ack_nack = 0;
-
 		printf("Enter a message: ");
-		if (fgets(str,sizeof(str),stdin) == NULL){
+		if (fgets(str, sizeof(str), stdin) == NULL) {
+			// Handle error
 			perror("Error reading input");
-			exit(EXIT_FAILURE);
+			continue;
 		}
-		
+
+		if (strcmp(str, "quit") == 0) break;
 
 		//
 		// WRITE ME: Compute crc (only lowest 16 bits are returned)
 		//
-		crc = pc_crc16(str,strlen(str));
+		unsigned short crc = pc_crc16(str, strlen(str));
+
+		attempts = 0;
+		ack = 0;
 
 		while (!ack)
 		{
@@ -128,31 +148,54 @@ int main(int argc, char* argv[])
 			// 
 			// WRITE ME: Send message
 			//
-			int len = strlen(str);
-			if (write(ifd,str,len)!=len){
-				perror("Write failed");
+			if (write(ofd,str,strlen(str)) != strlen(str)){
+				perror("Error sending message");
+				continue;
+				//Handle error
 			}
-		
+
 			printf("Message sent, waiting for ack... ");
 
 			
 			//
 			// WRITE ME: Wait for MSG_ACK or MSG_NACK
 			//
+			char ack_nack;
+			if (read(ifd, &ack_nack, 1) > 0) {
+            if (ack_nack == MSG_ACK) {
+					printf("ACK received\n");
+					ack = 1; // Acknowledgment received
+				} else if (ack_nack == MSG_NACK) {
+					printf("NACK received, resending...\n");
+				}
+			} else {
+				perror("Error reading acknowledgment");
+			}
+		}
+
+		attempts++;
 			
-			printf("%s\n", ack ? "ACK" : "NACK, resending");
+
+		// printf("%s\n", ack ? "ACK" : "NACK, resending");
+		}
+		if(!ack){
+			printf("Failed to receive ACK after %d attempts\n", MAX_ATTEMPTS);
 		}
 		printf("\n");
-	}
 
 
 	//
 	// WRITE ME: Reset the serial port parameters
 	//
-	
+	tcsetattr(ifd,TCSANOW, &oldtio);
+
 	// Close the serial port
 	close(ifd);
 	
-	return 0;
+	return EXIT_SUCCESS;
+
 }
+
+
+
 

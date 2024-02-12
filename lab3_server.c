@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
 	//
  	// WRITE ME: Set up the serial port parameters and data format
 	//
-	struct termios tio;
+	// struct termios tio;
 	memset(&tio, 0, sizeof(tio));
 	tio.c_cflag = CS8 | CREAD | CLOCAL; // 8n1, see termios.h for more information
 	tio.c_iflag = IGNPAR;

@@ -182,8 +182,7 @@ int main(int argc, char* argv[])
 	// Main loop
 	while (1)
 	{
-		int ack = MSG_NACK;
-
+	
 		// Read a line of input
 		char c;
 		int i = 0;
@@ -217,7 +216,8 @@ int main(int argc, char* argv[])
 		message[4 + str_len] = '\0';
 
 		int attempts = 0;
-
+		int ack = MSG_NACK;
+		
 		while (!ack && attempts < 500)
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 			}
 
 			// Introduce a delay
-			usleep(100000); // 100 ms delay
+			// usleep(100000); // 100 ms delay
 
 			// Wait for MSG_ACK or MSG_NACK
 			ssize_t bytes_read = read(ifd, &c, 1);
@@ -250,8 +250,6 @@ int main(int argc, char* argv[])
 			printf("Max attempts reached. Moving to next message.\n");
 		}
 	}
-
-
 
     // Reset the serial port parameters
     tio.c_cflag = oldtio.c_cflag;

@@ -18,10 +18,6 @@
 #include <fcntl.h>
 #include "pc_crc16.h"
 #include "lab3.h"
-#include "lab3_troll.h"
-
-
-#define MAX_ATTEMPTS 5
 
 #define GREETING_STR						\
     "CS454/654 - Lab 3 Server\n"				\
@@ -38,164 +34,153 @@
 
 int main(int argc, char* argv[])
 {
-	double troll_pct=0.3;		// Perturbation % for the troll (if needed)
-	int ifd,ofd,i,N,troll=0;	// Input and Output file descriptors (serial/troll)
-	char str[MSG_BYTES_MSG],opt;	// String input
-	struct termios oldtio, tio;	// Serial configuration parameters
-	int VERBOSE = 0;		// Verbose output - can be overriden with -v
-	int dev_name_len;
-	char * dev_name = NULL;
-	
-	/* Parse command line options */
-	while ((opt = getopt(argc, argv, "-t:v")) != -1) {
-		switch (opt) {
-		case 1:
-			dev_name_len = strlen(optarg);
-			dev_name = (char *)malloc(dev_name_len);
-			strncpy(dev_name, optarg, dev_name_len);
-			break;
-		case 't':
-			troll = 1; 
-			troll_pct = atof(optarg);                    
-			break;
-		case 'v':
-			VERBOSE = 1;
-			break;
-		default:
-			break;
-		}
-	}
+    double troll_pct = 0.3;    // Perturbation % for the troll (if needed)
+    int ifd, ofd, i, N, troll = 0;    // Input and Output file descriptors (serial/troll)
+    char str[MSG_BYTES_MSG], opt;    // String input
+    struct termios oldtio, tio;    // Serial configuration parameters
+    int VERBOSE = 0;        // Verbose output - can be overriden with -v
+    int dev_name_len;
+    char *dev_name = NULL;
+    
+    /* Parse command line options */
+    while ((opt = getopt(argc, argv, "-t:v")) != -1) {
+        switch (opt) {
+        case 1:
+            dev_name_len = strlen(optarg);
+            dev_name = (char *)malloc(dev_name_len + 1); // Allocate memory for null terminator
+            strncpy(dev_name, optarg, dev_name_len);
+            dev_name[dev_name_len] = '\0'; // Ensure string is null-terminated
+            break;
+        case 't':
+            troll = 1; 
+            troll_pct = atof(optarg);                    
+            break;
+        case 'v':
+            VERBOSE = 1;
+            break;
+        default:
+            break;
+        }
+    }
 
-	/* Check if a device name has been passed */
-	if (!dev_name) {
-		fprintf(stderr, USAGE_STR, argv[0]);
-		exit(EXIT_FAILURE);
-	}
-	
-	// Open the serial port (/dev/ttyS1) read-write
-	ifd = open(dev_name, O_RDWR | O_NOCTTY);
-	if (ifd < 0) {
-		perror(dev_name);
-		exit(EXIT_FAILURE);
-	}
+    /* Check if a device name has been passed */
+    if (!dev_name) {
+        fprintf(stderr, USAGE_STR, argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    
+    // Open the serial port (e.g., /dev/ttyUSB0) read-write
+    ifd = open(dev_name, O_RDWR | O_NOCTTY);
+    if (ifd < 0) {
+        perror(dev_name);
+        exit(EXIT_FAILURE);
+    }
 
-	printf(GREETING_STR);
+    printf(GREETING_STR);
 
-	// Start the troll if necessary
-	if (troll)
-	{
-		// Open troll process (lab5_troll) for output only
-		FILE * pfile;		// Process FILE for troll (used locally only)
-		char cmd[128];		// Shell command
+    // Start the troll if necessary
+    if (troll)
+    {
+        // Open troll process (lab5_troll) for output only
+        FILE *pfile;        // Process FILE for troll (used locally only)
+        char cmd[128];        // Shell command
 
-		snprintf(cmd, 128, TROLL_PATH " -p%f %s %s", troll_pct,
-			 (VERBOSE) ? "-v" : "", dev_name);
+        snprintf(cmd, 128, TROLL_PATH " -p%f %s %s", troll_pct,
+                 (VERBOSE) ? "-v" : "", dev_name);
 
-		pfile = popen(cmd, "w");
-		if (!pfile) { perror(TROLL_PATH); exit(-1); }
-		ofd = fileno(pfile);
-	}
-	else ofd = ifd;		// Use the serial port for both input and output
+        pfile = popen(cmd, "w");
+        if (!pfile) { perror(TROLL_PATH); exit(-1); }
+        ofd = fileno(pfile);
+    }
+    else ofd = ifd;        // Use the serial port for both input and output
 
-	//
- 	// WRITE ME: Set up the serial port parameters and data format
-	//
-	// struct termios tio;
-	memset(&tio, 0, sizeof(tio));
-	tio.c_cflag = CS8 | CREAD | CLOCAL; // 8n1, see termios.h for more information
-	tio.c_iflag = IGNPAR;
-	tio.c_oflag = 0;
+    // Set up the serial port parameters and data format
+    tcgetattr(ifd, &oldtio);
 
-	// Set input mode (non-canonical, no echo,...)
-	tio.c_lflag = 0;
+    tio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
+    tio.c_iflag = 0;
+    tio.c_oflag = 0;
+    tio.c_lflag = 0;
 
-	cfsetospeed(&tio, B9600); // Set baud rate
-	cfsetispeed(&tio, B9600); // Same baud rate for input
+    // flush any pending request on the port
+    tcflush(ifd, TCIFLUSH);
+    tcflush(ofd, TCIFLUSH);
 
-	tcsetattr(ifd, TCSANOW, &tio);
+    // set new attributes for serial port
+    tcsetattr(ifd, TCSANOW, &tio);
+    tcsetattr(ofd, TCSANOW, &tio);
 
-	int attempts = 0;
-	int ack = 0;
+    // Main loop
+    while (1)
+    {
+        // Read a line of input
+        char c;
+        int i = 0;
+        memset(str, 0, sizeof(str));
 
-	while(1)
-	{
+        while ((c = fgetc(stdin)) != '\n' && c != EOF) {
+            if (i < sizeof(str) - 1) {
+                str[i++] = c;
+            }
+        }
 
-		//
-		// WRITE ME: Read a line of input (Hint: use fgetc(stdin) to read each character)
-		//
-		printf("Enter a message: ");
-		if (fgets(str, sizeof(str), stdin) == NULL) {
-			// Handle error
-			perror("Error reading input");
-			continue;
-		}
+        int str_len = i;
 
-		if (strcmp(str, "quit") == 0) break;
+        str[strcspn(str, "\n")] = 0;
 
-		//
-		// WRITE ME: Compute crc (only lowest 16 bits are returned)
-		//
-		unsigned short crc = pc_crc16(str, strlen(str));
+        if (strcmp(str, "quit") == 0) break;
 
-		attempts = 0;
-		ack = 0;
+        // Compute crc
+        int crc_value = pc_crc16(str, str_len);
+        printf("crc : 0x%x\n", crc_value);
 
-		while (!ack)
-		{
-			printf("Sending (attempt %d)...\n", ++attempts);
+        // Prepare message
+        char *message = malloc(4 + str_len + 1);
 
-			
-			// 
-			// WRITE ME: Send message
-			//
-			if (write(ofd,str,strlen(str)) != strlen(str)){
-				perror("Error sending message");
-				continue;
-				//Handle error
-			}
+        message[0] = MSG_START;
+        message[1] = (crc_value >> 8) & 0xFF;
+        message[2] = crc_value & 0xFF;
+        message[3] = str_len;
 
-			printf("Message sent, waiting for ack... ");
+        memcpy(&message[4], str, str_len);
+        message[4 + str_len] = '\0';
 
-			
-			//
-			// WRITE ME: Wait for MSG_ACK or MSG_NACK
-			//
-			char ack_nack;
-			if (read(ifd, &ack_nack, 1) > 0) {
-            if (ack_nack == MSG_ACK) {
-					printf("ACK received\n");
-					ack = 1; // Acknowledgment received
-				} else if (ack_nack == MSG_NACK) {
-					printf("NACK received, resending...\n");
-				}
-			} else {
-				perror("Error reading acknowledgment");
-			}
-		}
+        int attempts = 0;
+        int ack = MSG_NACK;
 
-		attempts++;
-			
+        while (!ack)
+        {
+            printf("Sending (attempt %d)...\n", ++attempts);
 
-		// printf("%s\n", ack ? "ACK" : "NACK, resending");
-		}
-		if(!ack){
-			printf("Failed to receive ACK after %d attempts\n", MAX_ATTEMPTS);
-		}
-		printf("\n");
+            // Send message
+            write(ofd, message, str_len + 5);
 
+            printf("Message sent, waiting for ack... ");
 
-	//
-	// WRITE ME: Reset the serial port parameters
-	//
-	tcsetattr(ifd,TCSANOW, &oldtio);
+            // Wait for MSG_ACK or MSG_NACK
+            ssize_t bytes_read = read(ifd, &c, 1);
+            if (bytes_read == 1) {
+                printf("%c\n", (int)c);
+            } else {
+                printf("error when reading c: %1d\n", bytes_read);
+            }
 
-	// Close the serial port
-	close(ifd);
-	
-	return EXIT_SUCCESS;
+            ack = (int)c;
 
+            printf("%s\n", ack ? "ACK" : "NACK, resending");
+        }
+        printf("\n");
+        free(message);
+    }
+
+    // Reset the serial port parameters
+    tcsetattr(ifd, TCSANOW, &oldtio);
+
+    // Close the serial port
+    close(ifd);
+    
+    // Free allocated memory
+    free(dev_name);
+
+    return EXIT_SUCCESS;
 }
-
-
-
-

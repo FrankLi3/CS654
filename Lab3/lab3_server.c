@@ -114,6 +114,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         // Read a line of input
+		FILE * the_port;
         char c;
         int i = 0;
         memset(str, 0, sizeof(str));
@@ -137,10 +138,15 @@ int main(int argc, char* argv[])
         // Prepare message
         char *message = malloc(4 + str_len + 1);
 
-        message[0] = MSG_START;
-        message[1] = (crc_value >> 8) & 0xFF;
-        message[2] = crc_value & 0xFF;
-        message[3] = str_len;
+		message[0] = MSG_START;
+		message[1] = (crc_value >> 8) & 0xFF;
+		message[2] = crc_value & 0xFF;
+		message[3] = str_len;
+
+        printf("%02x\n", message[0]);
+		printf("%02x\n", message[1]);
+		printf("%02x\n", message[2]);
+		printf("%dx\n", message[3]);
 
         memcpy(&message[4], str, str_len);
         message[4 + str_len] = '\0';
@@ -174,7 +180,10 @@ int main(int argc, char* argv[])
     }
 
     // Reset the serial port parameters
-    tcsetattr(ifd, TCSANOW, &oldtio);
+    tio.c_cflag = oldtio.c_cflag;
+	tio.c_iflag = oldtio.c_iflag;
+	tio.c_oflag = oldtio.c_oflag;
+	tio.c_lflag = oldtio.c_lflag;
 
     // Close the serial port
     close(ifd);

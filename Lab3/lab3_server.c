@@ -113,6 +113,8 @@ int main(int argc, char* argv[])
     // Main loop
     while (1)
     {
+		int ack = MSG_NACK;
+
         // Read a line of input
 		FILE * the_port;
         char c;
@@ -152,12 +154,11 @@ int main(int argc, char* argv[])
         message[4 + str_len] = '\0';
 
         int attempts = 0;
-        int ack = MSG_NACK;
 
         while (!ack)
         {
             printf("Sending (attempt %d)...\n", ++attempts);
-
+			
             // Send message
             write(ofd, message, str_len + 5);
 

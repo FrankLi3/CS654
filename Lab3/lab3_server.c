@@ -19,40 +19,42 @@
 #include "pc_crc16.h"
 #include "lab3.h"
 
-#define GREETING_STR						\
-    "CS454/654 - Lab 3 Server\n"				\
-    "Author: Renato Mancuso (BU)\n"				\
-    "(Enter a message to send.  Type \"quit\" to exit)\n"
+#define GREETING_STR                \
+	"CS454/654 - Lab 3 Server\n"    \
+	"Author: Renato Mancuso (BU)\n" \
+	"(Enter a message to send.  Type \"quit\" to exit)\n"
 
-#define USAGE_STR							\
-	"\nUSAGE: %s [-v] [-t percentage] <dev>\n"			\
-	"   -v \t\t Verbose output\n"					\
+#define USAGE_STR                                                      \
+	"\nUSAGE: %s [-v] [-t percentage] <dev>\n"                         \
+	"   -v \t\t Verbose output\n"                                      \
 	"   -t \t\t Invoke troll with specified bit flipping percentage\n" \
 	"   <dev> \t Path to serial terminal device to use, e.g. /dev/ttyUSB0\n\n"
 
 #define TROLL_PATH "./lab3_troll"
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    double troll_pct=0.3;		// Perturbation % for the troll (if needed)
-	int ifd,ofd,i,N,troll=0;	// Input and Output file descriptors (serial/troll)
-	char str[MSG_BYTES_MSG],opt;	// String input
-	struct termios oldtio, tio;	// Serial configuration parameters
-	int VERBOSE = 0;		// Verbose output - can be overriden with -v
+	double troll_pct = 0.3;		   // Perturbation % for the troll (if needed)
+	int ifd, ofd, i, N, troll = 0; // Input and Output file descriptors (serial/troll)
+	char str[MSG_BYTES_MSG], opt;  // String input
+	struct termios oldtio, tio;	   // Serial configuration parameters
+	int VERBOSE = 0;			   // Verbose output - can be overriden with -v
 	int dev_name_len;
-	char * dev_name = NULL;
-	
+	char *dev_name = NULL;
+
 	/* Parse command line options */
-	while ((opt = getopt(argc, argv, "-t:v")) != -1) {
-		switch (opt) {
+	while ((opt = getopt(argc, argv, "-t:v")) != -1)
+	{
+		switch (opt)
+		{
 		case 1:
 			dev_name_len = strlen(optarg);
 			dev_name = (char *)malloc(dev_name_len);
 			strncpy(dev_name, optarg, dev_name_len);
 			break;
 		case 't':
-			troll = 1; 
-			troll_pct = atof(optarg);                    
+			troll = 1;
+			troll_pct = atof(optarg);
 			break;
 		case 'v':
 			VERBOSE = 1;
@@ -63,14 +65,16 @@ int main(int argc, char* argv[])
 	}
 
 	/* Check if a device name has been passed */
-	if (!dev_name) {
+	if (!dev_name)
+	{
 		fprintf(stderr, USAGE_STR, argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	
+
 	// Open the serial port (/dev/ttyS1) read-write
 	ifd = open(dev_name, O_RDWR | O_NOCTTY);
-	if (ifd < 0) {
+	if (ifd < 0)
+	{
 		perror(dev_name);
 		exit(EXIT_FAILURE);
 	}
@@ -81,187 +85,100 @@ int main(int argc, char* argv[])
 	if (troll)
 	{
 		// Open troll process (lab5_troll) for output only
-		FILE * pfile;		// Process FILE for troll (used locally only)
-		char cmd[128];		// Shell command
+		FILE *pfile;   // Process FILE for troll (used locally only)
+		char cmd[128]; // Shell command
 
 		snprintf(cmd, 128, TROLL_PATH " -p%f %s %s", troll_pct,
-			 (VERBOSE) ? "-v" : "", dev_name);
+				 (VERBOSE) ? "-v" : "", dev_name);
 
 		pfile = popen(cmd, "w");
-		if (!pfile) { perror(TROLL_PATH); exit(-1); }
+		if (!pfile)
+		{
+			perror(TROLL_PATH);
+			exit(-1);
+		}
 		ofd = fileno(pfile);
 	}
-	else ofd = ifd;		// Use the serial port for both input and output
+	else
+		ofd = ifd; // Use the serial port for both input and output
 
-    // Set up the serial port parameters and data format
-    tcgetattr(ifd, &oldtio);
+	// Set up the serial port parameters and data format
+	tcgetattr(ifd, &oldtio);
 
-    tio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
-    tio.c_iflag = 0;
-    tio.c_oflag = 0;
-    tio.c_lflag = 0;
+	tio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
+	tio.c_iflag = 0;
+	tio.c_oflag = 0;
+	tio.c_lflag = 0;
 
-    // flush any pending request on the port
-    tcflush(ifd, TCIFLUSH);
-    tcflush(ofd, TCIFLUSH);
+	// flush any pending request on the port
+	tcflush(ifd, TCIFLUSH);
+	tcflush(ofd, TCIFLUSH);
 
-    // set new attributes for serial port
-    tcsetattr(ifd, TCSANOW, &tio);
-    tcsetattr(ofd, TCSANOW, &tio);
+	// set new attributes for serial port
+	tcsetattr(ifd, TCSANOW, &tio);
+	tcsetattr(ofd, TCSANOW, &tio);
 
-    // Main loop
-    // while (1)
-    // {
-	// 	int ack = MSG_NACK;
-
-    //     // Read a line of input
-	// 	FILE * the_port;
-    //     char c;
-    //     int i = 0;
-    //     memset(str, 0, sizeof(str));
-
-    //     while ((c = fgetc(stdin)) != '\n' && c != EOF) {
-    //         if (i < sizeof(str) - 1) {
-    //             str[i++] = c;
-    //         }
-    //     }
-
-    //     int str_len = i;
-
-    //     str[strcspn(str, "\n")] = 0;
-
-    //     if (strcmp(str, "quit") == 0) break;
-
-    //     // Compute crc
-    //     int crc_value = pc_crc16(str, str_len);
-    //     printf("crc : 0x%x\n", crc_value);
-
-    //     // Prepare message
-    //     char *message = malloc(4 + str_len + 1);
-
-	// 	message[0] = MSG_START;
-	// 	message[1] = (crc_value >> 8) & 0xFF;
-	// 	message[2] = crc_value & 0xFF;
-	// 	message[3] = str_len;
-
-    //     printf("%02x\n", message[0]);
-	// 	printf("%02x\n", message[1]);
-	// 	printf("%02x\n", message[2]);
-	// 	printf("%dx\n", message[3]);
-
-    //     memcpy(&message[4], str, str_len);
-    //     message[4 + str_len] = '\0';
-
-    //     int attempts = 0;
-
-    //     while (!ack)
-    //     {
-    //         printf("Sending (attempt %d)...\n", ++attempts);
-			
-    //         // Send message
-    //         write(ofd, message, str_len + 5);
-
-    //         printf("Message sent, waiting for ack... ");
-
-    //         // Wait for MSG_ACK or MSG_NACK
-    //         ssize_t bytes_read = read(ifd, &c, 1);
-    //         if (bytes_read == 1) {
-    //             printf("%c\n", (int)c);
-    //         } else {
-    //             printf("error when reading c: %1d\n", bytes_read);
-    //         }
-
-    //         ack = (int)c;
-
-    //         printf("%s\n", ack ? "ACK" : "NACK, resending");
-    //     }
-    //     printf("\n");
-    //     free(message);
-    // }
-
-	// Main loop
 	while (1)
 	{
-	
 		// Read a line of input
 		char c;
 		int i = 0;
 		memset(str, 0, sizeof(str));
 
-		while ((c = fgetc(stdin)) != '\n' && c != EOF) {
-			if (i < sizeof(str) - 1) {
+		while ((c = fgetc(stdin)) != '\n' && c != EOF)
+		{
+			if (i < sizeof(str) - 1)
+			{
 				str[i++] = c;
 			}
 		}
-
-		int str_len = i;
-
-		str[strcspn(str, "\n")] = 0;
+		str[i] = '\0'; // Null terminate the string
 
 		if (strcmp(str, "quit") == 0) break;
 
-		// Compute crc
-		int crc_value = pc_crc16(str, str_len);
-		printf("crc : 0x%x\n", crc_value);
+		// Compute crc (only lowest 16 bits are returned)
+		int crc_value = pc_crc16(str, strlen(str));
 
 		// Prepare message
-		char *message = malloc(4 + str_len + 1);
-
+		char *message = malloc(4 + strlen(str));
 		message[0] = MSG_START;
 		message[1] = (crc_value >> 8) & 0xFF;
 		message[2] = crc_value & 0xFF;
-		message[3] = str_len;
-
-		memcpy(&message[4], str, str_len);
-		message[4 + str_len] = '\0';
+		message[3] = strlen(str);
+		memcpy(&message[4], str, strlen(str));
 
 		int attempts = 0;
 		int ack = MSG_NACK;
-		
-		while (!ack && attempts < 500)
+
+		while (!ack)
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);
 
 			// Send message
-			if (write(ofd, message, str_len + 5) < 0) {
-				perror("write failed");
-				break;
-			}
+			write(ofd, message, 4 + strlen(str));
 
-			// Introduce a delay
-			// usleep(100000); // 100 ms delay
+			printf("Message sent, waiting for ack... ");
 
 			// Wait for MSG_ACK or MSG_NACK
-			ssize_t bytes_read = read(ifd, &c, 1);
-			if (bytes_read == 1) {
-				ack = (int)c;
-			} else if (bytes_read < 0) {
+			ssize_t bytes_read = read(ifd, &ack, 1);
+			if (bytes_read <= 0)
+			{
 				perror("read failed");
-				break;
+				ack = MSG_NACK;
 			}
 
-			printf("%s\n", ack ? "ACK" : "NACK, resending");
+			printf("%s\n", ack == MSG_ACK ? "ACK" : "NACK, resending");
 		}
-
 		printf("\n");
-		free(message);
 
-		if (attempts >= 500) {
-			printf("Max attempts reached. Moving to next message.\n");
-		}
+		free(message);
 	}
 
-    // Reset the serial port parameters
-    tio.c_cflag = oldtio.c_cflag;
-	tio.c_iflag = oldtio.c_iflag;
-	tio.c_oflag = oldtio.c_oflag;
-	tio.c_lflag = oldtio.c_lflag;
+	// Reset the serial port parameters
+	tcsetattr(ifd, TCSANOW, &oldtio);
 
-    // Close the serial port
-    close(ifd);
-    
-    // Free allocated memory
-    free(dev_name);
+	// Close the serial port
+	close(ifd);
 
-    return EXIT_SUCCESS;
+	return EXIT_SUCCESS;
 }

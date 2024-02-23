@@ -144,9 +144,10 @@ int main(int argc, char *argv[])
 		// Compute crc (only lowest 16 bits are returned)
 		int crc_value = pc_crc16(str, strlen(str));
 
-		// Prepare message
+		printf("crc: 0x%x\n",crc_value);
 
-		char *message = malloc(4 + str_len);
+		// Prepare message
+		char *message = malloc(4 + str_len +1);
 		// char *message = malloc(4 + strlen(str));
 
 		message[0] = 0x0;
@@ -158,32 +159,28 @@ int main(int argc, char *argv[])
 		int ack = MSG_NACK;
 		int attempts = 0;
 
-		while (ack == MSG_NACK)
+		while (!ack)
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);
 
 			// Send message
-			write(ofd, message, 4 + str_len); // Adjusted to correct message size
+			write(ofd, message, 5 + str_len); // Adjusted to correct message size
 
 			printf("Message sent, waiting for ack... ");
 
 			// Wait for MSG_ACK or MSG_NACK
-			ssize_t bytes_read = read(ifd, &ack, 1);
+			ssize_t bytes_read = read(ifd, &c, 1);
 			if (bytes_read <= 0)
 			{
-				perror("Error reading acknowledgment");
-				break; // Exit the loop in case of read error or no data
+				printf("Error when reading c: %1d\n",bytes_read);
+			}else{
+				printf("%c\n",(int)c);
 			}
-
+			ack = (int)c;
 			printf("%s\n", ack == MSG_ACK ? "ACK" : "NACK, resending");
 		}
-
+		printf("\n");
 		free(message);
-
-		if (ack != MSG_ACK)
-		{
-			break; // Exit the main loop if we didn't receive an ACK
-		}
 	}
 
 	// Reset the serial port parameters

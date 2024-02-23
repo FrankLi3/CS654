@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
 
 		// Compute crc
 		int crc_value = pc_crc16(str, str_len);
-		printf("crc : 0x%x\n", crc_value);
+    	printf("crc : 0x%x\n", crc_value);
 
 		// Prepare message
 		char *message = malloc(4 + str_len + 1);
@@ -143,7 +143,15 @@ int main(int argc, char* argv[])
 		message[2] = crc_value & 0xFF; // CRC low byte
 		message[3] = str_len;
 
+		printf("%02x\n",message[0]);
+		printf("%02x\n",message[1]);
+		printf("%02x\n",message[2]);
+		printf("%dx\n",message[3]);
+
 		memcpy(&message[4], str, str_len);
+
+
+		message[4+str_len] = '\0';
 
 		for (int i = 0; i < str_len; i++) {
 			printf("%02X ", message[i + 4]);
@@ -179,8 +187,6 @@ int main(int argc, char* argv[])
 		free(message);
 
 	}
-
-
 
     // Reset the serial port parameters
     tio.c_cflag = oldtio.c_cflag;

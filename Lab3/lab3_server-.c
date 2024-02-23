@@ -136,6 +136,8 @@ int main(int argc, char* argv[])
 		crc = pc_crc16(str, strlen(str));
 
 	
+	    int ack = MSG_NACK;
+		int attempts = 0;
 		while (!ack)
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);

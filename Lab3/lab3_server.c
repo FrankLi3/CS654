@@ -144,10 +144,10 @@ int main(int argc, char *argv[])
 		// Compute crc (only lowest 16 bits are returned)
 		int crc_value = pc_crc16(str, strlen(str));
 
-		printf("crc: 0x%x\n",crc_value);
+		printf("crc: 0x%x\n", crc_value);
 
 		// Prepare message
-		char *message = malloc(4 + str_len +1);
+		char *message = malloc(4 + str_len + 1);
 		// char *message = malloc(4 + strlen(str));
 
 		message[0] = 0x0;
@@ -159,27 +159,27 @@ int main(int argc, char *argv[])
 		int ack = MSG_NACK;
 		int attempts = 0;
 
-		while (!ack)
+		while (ack != MSG_ACK) // Keep retrying until ACK is received
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);
 
 			// Send message
-			write(ofd, message, 5 + str_len); // Adjusted to correct message size
+			write(ofd, message, 4 + str_len);
 
 			printf("Message sent, waiting for ack... ");
 
 			// Wait for MSG_ACK or MSG_NACK
 			ssize_t bytes_read = read(ifd, &c, 1);
-			if (bytes_read <= 0)
-			{
-				printf("Error when reading c: %1d\n",bytes_read);
-			}else{
-				printf("%c\n",(int)c);
+
+			if (bytes_read <= 0){
+				perror("Error reading acknowledgment or no data");
 			}
-			ack = (int)c;
-			printf("%s\n", ack == MSG_ACK ? "ACK" : "NACK, resending");
+			else{
+				ack = (int)c;
+				printf("%s\n", ack == MSG_ACK ? "ACK" : "NACK, resending");
+			}
 		}
-		printf("\n");
+
 		free(message);
 	}
 

@@ -182,6 +182,13 @@ int main(int argc, char* argv[])
 			int ack = 0;
 			read(ifd, &ack_nack, 1); // Assuming blocking read for simplicity
 			ack = (ack_nack == MSG_ACK);
+			if(ack==0){
+				printf("fail ");
+			}else(
+				printf("succ");
+				printf(" attempt %d---\n", attempts)
+				ack=1;
+			)
 
 
 

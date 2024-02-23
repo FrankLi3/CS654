@@ -98,19 +98,13 @@ int main(int argc, char* argv[])
  	// WRITE ME: Set up the serial port parameters and data format
 	//
 	// Set up the serial port parameters and data format
-	tcgetattr(ifd, &oldtio); // Save current serial port settings
-	memset(&tio, 0, sizeof(tio)); // Clear struct for new port settings
-
-	tio.c_cflag = CS8 | CLOCAL | CREAD; // Control mode flags
-	tio.c_iflag = IGNPAR; // Input mode flags to ignore framing and parity errors
-	tio.c_oflag = 0; // Output mode flags
-	tio.c_lflag = 0; // Local mode flags
-
-	cfsetospeed(&tio, B9600); // Set output speed
-	cfsetispeed(&tio, B9600); // Set input speed
-
-	tcflush(ifd, TCIFLUSH); // Flush the port
-	tcsetattr(ifd, TCSANOW, &tio); // Apply the settings to the port
+	tcgetattr(sfd, &oldtio);
+	tio.c_cflag 	= B9600 | CS8 | CLOCAL;
+	tio.c_iflag 	= 0;
+	tio.c_oflag 	= 0;
+	tio.c_lflag 	= 0;
+	tcflush(sfd, TCIFLUSH);
+	tcsetattr(sfd, TCSANOW, &tio);
 
 	while(1)
 	{
@@ -178,20 +172,7 @@ int main(int argc, char* argv[])
 			// WRITE ME: Wait for MSG_ACK or MSG_NACK
 			//
 			// Wait for MSG_ACK or MSG_NACK
-			unsigned char ack_nack;
-			int ack = 0;
-			read(ifd, &ack_nack, 1); // Assuming blocking read for simplicity
-			ack = (ack_nack == MSG_ACK);
-			if(ack==0){
-				printf("fail ");
-			}else(
-				printf("succ");
-				printf(" attempt %d---\n", attempts)
-				ack=1;
-			)
-
-
-
+			while (read(ifd, &ack, 1)==0); // Assuming blocking read for simplicity
 			printf("%s\n", ack ? "ACK" : "NACK, resending");
 		}
 		printf("\n");

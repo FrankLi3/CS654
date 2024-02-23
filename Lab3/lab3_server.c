@@ -132,7 +132,11 @@ int main(int argc, char *argv[])
 				str[i++] = c;
 			}
 		}
-		str[i] = '\0'; // Null terminate the string
+
+		int str_len = i;
+		str[strcspn(str, "\n")] = 0;
+
+		// str[i] = '\0'; // Null terminate the string
 
 		if (strcmp(str, "quit") == 0) break;
 
@@ -140,12 +144,15 @@ int main(int argc, char *argv[])
 		int crc_value = pc_crc16(str, strlen(str));
 
 		// Prepare message
-		char *message = malloc(4 + strlen(str));
-		message[0] = MSG_START;
+
+		char *message = malloc(4 + str_len);
+		// char *message = malloc(4 + strlen(str));
+
+		message[0] = 0x0;
 		message[1] = (crc_value >> 8) & 0xFF;
 		message[2] = crc_value & 0xFF;
-		message[3] = strlen(str);
-		memcpy(&message[4], str, strlen(str));
+		message[3] = str_len;
+		memcpy(&message[4], str, str_len);
 
 		int attempts = 0;
 		int ack = MSG_NACK;
@@ -155,16 +162,20 @@ int main(int argc, char *argv[])
 			printf("Sending (attempt %d)...\n", ++attempts);
 
 			// Send message
-			write(ofd, message, 4 + strlen(str));
+			if(write(ofd, message, 4 + str_len)){
+				perror("write failed");
+				break;
+			}
 
 			printf("Message sent, waiting for ack... ");
 
 			// Wait for MSG_ACK or MSG_NACK
 			ssize_t bytes_read = read(ifd, &ack, 1);
-			if (bytes_read <= 0)
-			{
+			if (bytes_read == 1) {
+				ack = (int)c;
+			} else if (bytes_read < 0) {
 				perror("read failed");
-				ack = MSG_NACK;
+				break;
 			}
 
 			printf("%s\n", ack == MSG_ACK ? "ACK" : "NACK, resending");

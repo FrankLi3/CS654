@@ -162,21 +162,20 @@ int main(int argc, char *argv[])
 			printf("Sending (attempt %d)...\n", ++attempts);
 
 			// Send message
-			if(write(ofd, message, 4 + str_len)){
-				perror("write failed");
-				break;
-			}
+			write(ofd, message, 5 + str_len);
+				
 
 			printf("Message sent, waiting for ack... ");
 
 			// Wait for MSG_ACK or MSG_NACK
 			ssize_t bytes_read = read(ifd, &ack, 1);
 			if (bytes_read == 1) {
-				ack = (int)c;
+				printf("%c\n",(int)c);
 			} else if (bytes_read < 0) {
-				perror("read failed");
-				break;
+				printf("reading c failed: %1d\n",bytes_read);
 			}
+
+			ack = (int)c;
 
 			printf("%s\n", ack == MSG_ACK ? "ACK" : "NACK, resending");
 		}

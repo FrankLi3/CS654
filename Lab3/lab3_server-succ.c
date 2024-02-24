@@ -146,6 +146,7 @@ int main(int argc, char* argv[])
 		message[3] = str_len;
 
 		memcpy(&message[4], str, str_len);
+		message[4 + str_len] = \0;
 	     
 
 		int attempts = 0;

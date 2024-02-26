@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
     		printf("crc : 0x%x\n", crc_value);
 
 		// Prepare message
-		char *message = malloc(4 + str_len + 1);
+		char * message = (char *) malloc(4 + str_len + 1);
 
 		message[0] = MSG_START;
 		message[1] = (crc_value >> 8) & 0xFF; // CRC high byte
@@ -141,6 +141,7 @@ int main(int argc, char* argv[])
 		memcpy(&message[4], str, str_len);
 
 		message[4 + str_len] = '\0';
+		
 				
 		int attempts = 0;
 		int ack = MSG_NACK;
@@ -150,16 +151,21 @@ int main(int argc, char* argv[])
 			printf("Sending (attempt %d)...\n", ++attempts);
 
 			// Send message
+		
 			write(ofd, message, str_len + 5);
-			
 			// Introduce a delay
-			usleep(100000); // 100 ms delay
+			printf("Message sent, waiting for ack...\n");
+			usleep(100000); // 1000 ms delay
 
 			// Wait for MSG_ACK or MSG_NACK
 			ssize_t bytes_read = read(ifd, &c, 1);
+			printf("%d",bytes_read);
 			if (bytes_read == 1) {
-				ack = (int)c;
-			} else if (bytes_read < 0) {
+				printf("ACK: %c\n",c);
+				ack = c;
+			}else if(bytes_read ==0){
+				ack = MSG_NACK;
+			}else if (bytes_read < 0) {
 				perror("read failed");
 				break;
 			}

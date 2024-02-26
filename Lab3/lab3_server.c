@@ -159,15 +159,14 @@ int main(int argc, char* argv[])
 			//
 			// WRITE ME: Wait for MSG_ACK or MSG_NACK
 			//
-			char byte_read = read(ifd, &ack, 1);
-			if (byte_read == 1){
-				printf("%d\n",(int) ack);
-			}else if (byte_read < 0){
-				printf("Read failed");
-				break;
-			}
+			while(read(ifd, &ack, 1) == 0);
 			
-			ack = (int) ack;
+			if (ack == 1){
+				ack = MSG_ACK;
+			}else{
+				ack = MSG_NACK;
+				printf("%d\n",ack);
+			}
 
 			printf("%s\n", ack ? "ACK" : "NACK, resending");
 		}

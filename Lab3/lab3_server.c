@@ -103,13 +103,9 @@ int main(int argc, char* argv[])
 
     // flush any pending request on the port
     tcflush(ifd, TCIFLUSH);
-    tcflush(ofd, TCIFLUSH);
 
     // set new attributes for serial port
     tcsetattr(ifd, TCSANOW, &tio);
-    tcsetattr(ofd, TCSANOW, &tio);
-
-   
 
 	// Main loop
 	while (1)
@@ -133,29 +129,18 @@ int main(int argc, char* argv[])
 
 		// Compute crc
 		int crc_value = pc_crc16(str, str_len);
-    	printf("crc : 0x%x\n", crc_value);
+    		printf("crc : 0x%x\n", crc_value);
 
 		// Prepare message
 		char *message = malloc(4 + str_len + 1);
 
-		message[0] = 0;
+		message[0] = MSG_START;
 		message[1] = (crc_value >> 8) & 0xFF; // CRC high byte
 		message[2] = crc_value & 0xFF; // CRC low byte
 		message[3] = str_len;
-
-		printf("%02x\n",message[0]);
-		printf("%02x\n",message[1]);
-		printf("%02x\n",message[2]);
-		printf("%dx\n",message[3]);
-
 		memcpy(&message[4], str, str_len);
 
-
-		message[4+str_len] = '\0';
-
-		for (int i = 0; i < str_len; i++) {
-			printf("%02X ", message[i + 4]);
-		}
+		message[4 + str_len] = '\0';
 				
 		int attempts = 0;
 		int ack = MSG_NACK;
@@ -173,13 +158,12 @@ int main(int argc, char* argv[])
 			// Wait for MSG_ACK or MSG_NACK
 			ssize_t bytes_read = read(ifd, &c, 1);
 			if (bytes_read == 1) {
-				printf("%c\n",(int)c);
 				ack = (int)c;
 			} else if (bytes_read < 0) {
 				perror("read failed");
 				break;
 			}
-
+			
 			printf("%s\n", ack ? "ACK" : "NACK, resending");
 		}
 
@@ -189,10 +173,7 @@ int main(int argc, char* argv[])
 	}
 
     // Reset the serial port parameters
-    tio.c_cflag = oldtio.c_cflag;
-	tio.c_iflag = oldtio.c_iflag;
-	tio.c_oflag = oldtio.c_oflag;
-	tio.c_lflag = oldtio.c_lflag;
+    tcsetattr(ifd, TCSANOW, &oldtio);
 
     // Close the serial port
     close(ifd);

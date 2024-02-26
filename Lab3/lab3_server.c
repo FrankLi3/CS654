@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include "pc_crc16.h"
 #include "lab3.h"
+#include "lab3_troll.h"
 
 #define GREETING_STR						\
     "CS454/654 - Lab 3 Server\n"				\
@@ -34,7 +35,7 @@
 
 int main(int argc, char* argv[])
 {
-    double troll_pct=0.3;		// Perturbation % for the troll (if needed)
+	double troll_pct=0.3;		// Perturbation % for the troll (if needed)
 	int ifd,ofd,i,N,troll=0;	// Input and Output file descriptors (serial/troll)
 	char str[MSG_BYTES_MSG],opt;	// String input
 	struct termios oldtio, tio;	// Serial configuration parameters
@@ -93,99 +94,96 @@ int main(int argc, char* argv[])
 	}
 	else ofd = ifd;		// Use the serial port for both input and output
 
-    // Set up the serial port parameters and data format
-    tcgetattr(ifd, &oldtio);
+	//
+ 	// WRITE ME: Set up the serial port parameters and data format
+	//
+	
+	tcgetattr(ifd, &oldtio); // oldtio stores old serial settings
+	tio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
+	tio.c_iflag = 0;
+	tio.c_oflag = 0;
+	tio.c_lflag = 0;
+	
+	tcflush(ifd, TCIFLUSH); // flush pending transfers
+	
+	tcsetattr(ifd, TCSANOW, &tio); // enable new serial port settings
 
-    tio.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
-    tio.c_iflag = 0;
-    tio.c_oflag = 0;
-    tio.c_lflag = 0;
+	
 
-    // flush any pending request on the port
-    tcflush(ifd, TCIFLUSH);
-
-    // set new attributes for serial port
-    tcsetattr(ifd, TCSANOW, &tio);
-
-	// Main loop
-	while (1)
+	while(1)
 	{
-		// Read a line of input
-		char c;
-		int i = 0;
-		memset(str, 0, sizeof(str));
 
-		while ((c = fgetc(stdin)) != '\n' && c != EOF) {
-			if (i < sizeof(str) - 1) {
-				str[i++] = c;
-			}
-		}
-
-		int str_len = i;
-
-		str[strcspn(str, "\n")] = 0;
-
-		if (strcmp(str, "quit") == 0) break;
-
-		// Compute crc
-		int crc_value = pc_crc16(str, str_len);
-    		printf("crc : 0x%x\n", crc_value);
-
-		// Prepare message
-		char * message = (char *) malloc(4 + str_len + 1);
-
-		message[0] = MSG_START;
-		message[1] = (crc_value >> 8) & 0xFF; // CRC high byte
-		message[2] = crc_value & 0xFF; // CRC low byte
-		message[3] = str_len;
-		memcpy(&message[4], str, str_len);
-
-		message[4 + str_len] = '\0';
+		//
+		// WRITE ME: Read a line of input (Hint: use fgetc(stdin) to read each character)
+		//
+		char bigbuf[300];
 		
-				
-		int attempts = 0;
-		int ack = MSG_NACK;
+		
+		//while(getline((char**)&str, NULL, stdin) == -1);
+		int str_len = 0;
+		while ((bigbuf[4+str_len] = fgetc(stdin)) != '\n') {
+			str_len++;
+			
+		}
+		bigbuf[4+str_len] = '\0';
 
+		if (strcmp(bigbuf+4, "quit") == 0) break;
+
+		//
+		// WRITE ME: Compute crc (only lowest 16 bits are returned)
+		//
+		char ack = MSG_NACK;
+		char crc1 = 0x00FF & pc_crc16(bigbuf+4, str_len);
+		char crc2 = 0x00FF & (pc_crc16(bigbuf+4, str_len) >> 8);
+		int attempts = 0;
+		
+		bigbuf[0] = MSG_START;
+		bigbuf[1] = crc2;
+		bigbuf[2] = crc1;
+		bigbuf[3] = (char)str_len;
+	
 		while (!ack)
 		{
 			printf("Sending (attempt %d)...\n", ++attempts);
 
-			// Send message
+			
+			// 
+			// WRITE ME: Send message
+			//
+			write(ofd, bigbuf, 4 + str_len);
+			
 		
-			write(ofd, message, str_len + 5);
-			// Introduce a delay
-			printf("Message sent, waiting for ack...\n");
-			usleep(100000); // 1000 ms delay
-
-			// Wait for MSG_ACK or MSG_NACK
-			ssize_t bytes_read = read(ifd, &c, 1);
-			printf("%d",bytes_read);
-			if (bytes_read == 1) {
-				printf("ACK: %c\n",c);
-				ack = c;
-			}else if(bytes_read ==0){
-				ack = MSG_NACK;
-			}else if (bytes_read < 0) {
-				perror("read failed");
+			printf("Message sent, waiting for ack... ");
+			usleep(100000);
+			
+			//
+			// WRITE ME: Wait for MSG_ACK or MSG_NACK
+			//
+			char byte_read = read(ifd, &ack, 1);
+			if (byte_read == 1){
+				printf("%d\n",(int) ack);
+			}else if (byte_read < 0){
+				printf("Read failed");
 				break;
 			}
 			
+			ack = (int) ack;
+
 			printf("%s\n", ack ? "ACK" : "NACK, resending");
 		}
-
 		printf("\n");
-		free(message);
-
 	}
 
-    // Reset the serial port parameters
-    tcsetattr(ifd, TCSANOW, &oldtio);
 
-    // Close the serial port
-    close(ifd);
-    
-    // Free allocated memory
-    free(dev_name);
+	//
+	// WRITE ME: Reset the serial port parameters
+	//
+	tcsetattr(ifd, TCSANOW, &oldtio); // enable old serial port settings
 
-    return EXIT_SUCCESS;
+	
+	// Close the serial port
+	close(ifd);
+	
+	return EXIT_SUCCESS;
 }
+

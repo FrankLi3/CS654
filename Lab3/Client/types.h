@@ -1,3 +1,14 @@
+/****************************************************/
+/*                                                  */
+/*   CS-454/654 Embedded Systems Development        */
+/*   Instructor: Renato Mancuso <rmancuso@bu.edu>   */
+/*   Boston University                              */
+/*                                                  */
+/*   Description: definition of basic types and     */
+/*                fundamental bit operations        */
+/*                                                  */
+/****************************************************/
+
 #ifndef __TYPES_H__
 #define __TYPES_H__
 
@@ -23,5 +34,9 @@ typedef unsigned long int uint32_t;	/**< Unsigned 32 bit intgerer. */
 typedef signed char int8_t;		/**< signed 8 bit intgerer. */
 typedef signed int int16_t;	/**< signed 16 bit intgerer. */
 typedef signed long int int32_t;	/**< signed 32 bit intgerer. */
+
+void Nop(){
+    asm("Nop");
+}
 
 #endif //__TYPES_H__

@@ -42,6 +42,6 @@
 /* function prototypes - implement in uart.c file */
 inline void uart2_init(uint16_t baud);
 void uart2_send_8(int8_t data);
-uint16_t uart2_recv();
+int8_t uart2_recv(uint8_t *data);
 
 #endif

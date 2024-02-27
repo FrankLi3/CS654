@@ -12,4 +12,4 @@
 #include "types.h"
 
 //period in ms
-void set_timer1(uint16_t period);
+void setup_timer(uint8_t* timed_out);

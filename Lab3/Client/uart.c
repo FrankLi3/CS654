@@ -45,7 +45,6 @@ inline void uart2_init(uint16_t baud)
     U2STA = 0;
     U2STAbits.UTXEN = 1; //enable UART TX
     
-    
 }
 
 void uart2_send_8(int8_t data)
@@ -56,21 +55,26 @@ void uart2_send_8(int8_t data)
     
 }
 
-uint16_t uart2_recv()
+
+
+int8_t uart2_recv(uint8_t * data)
 {
-    TMR1 = 0x00;
-    timer_flag = 1;
-    T1CONbits.TON = 1;
-    
-    while(timer_flag){
-        if(U2STAbits.OERR){
+//    TMR1 = 0x00;
+//    timer_flag = 1;
+//    T1CONbits.TON = 1;
+    if(U2STAbits.OERR){
             U2STAbits.OERR = 0;
         }
-
-        if(U2STAbits.URXDA){
-            T1CONbits.TON = 0;
-            return U2RXREG & 0x00FF;
+    if(U2STAbits.URXDA){
+            //T1CONbits.TON = 0;
+            *data = U2RXREG & 0x00FF;
+            return 0;
         }
-        return 0xFF00;
-    }
+    return -1;
+    
+
+        
+    
+        
+    
 }

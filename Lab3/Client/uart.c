@@ -29,8 +29,8 @@ inline void uart2_init(uint16_t baud)
     IFS1bits.U2RXIF = 0;
     IFS1bits.U2TXIF = 0;
     /* Set IO pins */
-    TRISFbits.TRISF2 = 1; //set as input UART1 RX pin
-    TRISFbits.TRISF3 = 0; //set as output UART1 TX pin
+    TRISFbits.TRISF4 = 1; //set as input UART2 RX pin
+    TRISFbits.TRISF5 = 0; //set as output UART2 TX pin
     /* baud rate */
     // use the following equation to compute the proper
     // setting for a specific baud rate
@@ -57,7 +57,7 @@ void uart2_send_8(int8_t data)
 
 
 
-int8_t uart2_recv(uint8_t * data)
+int8_t uart2_recv(uint8_t* data)
 {
 //    TMR1 = 0x00;
 //    timer_flag = 1;

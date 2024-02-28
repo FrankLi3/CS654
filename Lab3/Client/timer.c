@@ -12,7 +12,7 @@
 #include "timer.h"
 
 //period in ms
-void set_timer1(uint16_t period){
+void set_timer2(uint16_t period){
 	/* Implement me please. */
         /* Initialize Timer in Normal mode, internal clock*/
     CLEARBIT(T2CONbits.TON);
@@ -36,7 +36,7 @@ void set_timer1(uint16_t period){
     SETBIT(IEC0bits.T2IE);
 
     /* Turn on TImer 2*/   
-    SETBIT(T2CONbits.TON);
+//    SETBIT(T2CONbits.TON);
         
         
     /* Initialize Timer in Normal mode, internal clock*/

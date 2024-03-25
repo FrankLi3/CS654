@@ -38,6 +38,42 @@ int main(int argc, char **argv)
 	/* Provide prompt to the user for a voltage range between 0
 	 * and 5 V. Require a new set of inputs if an invalid range
 	 * has been entered. */
+	/* Provide prompt to the user for a voltage range between 0 and 5 V. 
+ * Require a new set of inputs if an invalid range has been entered. */
+i = 0;
+while (i < MAX_TRIES) {
+    printf("Enter minimum voltage (between 0 and 5 V): ");
+    ret = scanf("%lf", &vMin);
+    if (ret != 1 || vMin < 0 || vMin > 5) {
+        printf("Invalid minimum voltage, please try again.\n");
+        i++;
+    } else {
+        break;
+    }
+}
+
+if (i == MAX_TRIES) {
+    printf("Too many invalid inputs for minimum voltage, exiting...\n");
+    return EXIT_FAILURE;
+}
+
+i = 0;
+while (i < MAX_TRIES) {
+    printf("Enter maximum voltage (between %lf and 5 V): ", vMin);
+    ret = scanf("%lf", &vMax);
+    if (ret != 1 || vMax <= vMin || vMax > 5) {
+        printf("Invalid maximum voltage, please try again.\n");
+        i++;
+    } else {
+        vRange = vMax - vMin;
+        break;
+    }
+}
+
+if (i == MAX_TRIES) {
+    printf("Too many invalid inputs for maximum voltage, exiting...\n");
+    return EXIT_FAILURE;
+}
 	
 	/* Compute the maximum resolutiuon of the CLOCK_REALTIME
 	 * system clock and output the theoretical maximum frequency
